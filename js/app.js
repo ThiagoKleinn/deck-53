@@ -194,32 +194,48 @@ function renderProductList(){
     </div>`;
     return;
   }
-  el.innerHTML = products.map(p=>{
-    const margem = p.venda>0 ? (((p.venda-p.custo)/p.venda)*100).toFixed(0) : '0';
-    const low = p.estoque <= p.minimo;
+  const groups = {};
+  products.forEach(p=>{
+    const cat = (p.categoria || '').trim() || 'Sem categoria';
+    if(!groups[cat]) groups[cat] = [];
+    groups[cat].push(p);
+  });
+  const categorias = Object.keys(groups).sort((a,b)=> a.localeCompare(b, 'pt-BR'));
+
+  el.innerHTML = categorias.map(cat=>{
+    const items = groups[cat];
     return `
-    <div class="card">
-      <div class="product-row">
-        <div>
-          <div class="product-name">${escapeHtml(p.nome)}</div>
-          ${p.categoria ? `<div class="product-cat">${escapeHtml(p.categoria)}</div>` : ''}
-        </div>
-        <div class="stock-pill ${low?'low':''}">${p.estoque} un.</div>
+      <div class="category-group">
+        <div class="category-heading">${escapeHtml(cat)}</div>
+        ${items.map(p=>{
+      const margem = p.venda>0 ? (((p.venda-p.custo)/p.venda)*100).toFixed(0) : '0';
+      const low = p.estoque <= p.minimo;
+      return `
+          <div class="card">
+            <div class="product-row">
+              <div>
+                <div class="product-name">${escapeHtml(p.nome)}</div>
+              </div>
+              <div class="stock-pill ${low?'low':''}">${p.estoque} un.</div>
+            </div>
+            <div class="product-meta">
+              <span>Custo: R$ ${fmt(p.custo)}</span>
+              <span>Venda: R$ ${fmt(p.venda)}</span>
+              <span>Margem: ${margem}%</span>
+            </div>
+            <div class="row-actions">
+              <button class="btn btn-ghost btn-sm" onclick="openRestock('${p.id}')">+ Repor</button>
+              <button class="btn btn-ghost btn-sm" onclick="openProductModal('${p.id}')">Editar</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">Remover</button>
+            </div>
+          </div>`;
+    }).join('')}
       </div>
-      <div class="product-meta">
-        <span>Custo: R$ ${fmt(p.custo)}</span>
-        <span>Venda: R$ ${fmt(p.venda)}</span>
-        <span>Margem: ${margem}%</span>
-      </div>
-      <div class="row-actions">
-        <button class="btn btn-ghost btn-sm" onclick="openRestock('${p.id}')">+ Repor</button>
-        <button class="btn btn-ghost btn-sm" onclick="openProductModal('${p.id}')">Editar</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">Remover</button>
-      </div>
-    </div>`;
+    `;
   }).join('');
 }
 
+/* ================= VENDER ================= */
 function renderSellTab(){
   const el = document.getElementById('sell-card');
   const products = Deck53DB.getState().products;
@@ -279,8 +295,8 @@ function renderTodaySales(){
   const el = document.getElementById('today-sales');
   const todayStr = new Date().toDateString();
   const todaySales = Deck53DB.getState().sales
-    .filter(s => new Date(s.data).toDateString() === todayStr)
-    .slice().reverse();
+      .filter(s => new Date(s.data).toDateString() === todayStr)
+      .slice().reverse();
   if(todaySales.length===0){
     el.innerHTML = `<div class="empty" style="padding:24px 0;">Nenhuma venda registrada hoje.</div>`;
     return;
@@ -352,7 +368,7 @@ function renderDashboard(){
     <div class="card">
       <div class="section-title" style="font-size:16px; margin-bottom:8px;">Top produtos (por lucro)</div>
       ${top.length===0 ? '<div class="empty" style="padding:10px 0;">Sem vendas neste período.</div>' :
-        top.map(([nome,v])=>`
+      top.map(([nome,v])=>`
           <div class="rank-row">
             <div class="rank-name">${escapeHtml(nome)} <span style="color:var(--text-faint); font-weight:400;">× ${v.qtd}</span></div>
             <div class="rank-value">+R$ ${fmt(v.lucro)}</div>
@@ -362,7 +378,7 @@ function renderDashboard(){
     <div class="card">
       <div class="section-title" style="font-size:16px; margin-bottom:8px;">Estoque baixo</div>
       ${lowStock.length===0 ? '<div class="empty" style="padding:10px 0;">Tudo certo por aqui.</div>' :
-        lowStock.map(p=>`
+      lowStock.map(p=>`
           <div class="alert-row"><span>${escapeHtml(p.nome)}</span><span>${p.estoque} un. (mín. ${p.minimo})</span></div>
         `).join('')}
     </div>

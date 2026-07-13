@@ -138,6 +138,17 @@ main{ flex:1; padding: 18px 16px 100px; }
   background: var(--surface); border-radius: var(--radius); padding: 14px 16px;
   margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.04);
 }
+.category-group{ margin-bottom: 22px; }
+.category-heading{
+  font-family:'Bebas Neue', sans-serif;
+  font-size: 15px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--wood);
+  margin: 4px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
 .plank-divider{
   height:2px;
   background: repeating-linear-gradient(to right, var(--plank) 0 10px, transparent 10px 14px);
