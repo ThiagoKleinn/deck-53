@@ -1,6 +1,8 @@
 let authMode = "signin";
 let currentPeriod = "hoje";
 let sellSelection = { productId: null, qty: 1 };
+let sellMode = "item"; // item ou avulsa
+let quickSale = { valor: "", obs: "" };
 
 function fmt(n){ return (n||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 function escapeHtml(str){ const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
@@ -202,11 +204,40 @@ function renderProductList(){
   }).join('');
 }
 
+function setSellMode(mode){
+  sellMode = mode;
+  renderSellTab();
+}
+
 function renderSellTab(){
   const el = document.getElementById('sell-card');
   const products = Deck53DB.getState().products;
+
+  const modeToggle = `
+    <div class="period-tabs" style="margin-bottom:16px;">
+      <div class="period-tab ${sellMode==='item'?'active':''}" onclick="setSellMode('item')">Por item</div>
+      <div class="period-tab ${sellMode==='avulsa'?'active':''}" onclick="setSellMode('avulsa')">Venda avulsa</div>
+    </div>
+  `;
+
+  if(sellMode==='avulsa'){
+    el.innerHTML = modeToggle + `
+      <div class="field">
+        <label>Valor total da venda (R$)</label>
+        <input type="number" step="0.01" id="quick-valor" placeholder="0,00" value="${quickSale.valor}" oninput="quickSale.valor=this.value">
+      </div>
+      <div class="field">
+        <label>Observação (opcional)</label>
+        <input type="text" id="quick-obs" placeholder="Ex: Mesa 5, 5 cervejas + 1 porção" value="${escapeHtml(quickSale.obs)}" oninput="quickSale.obs=this.value">
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:6px;" onclick="registerQuickSale()">Registrar venda</button>
+    `;
+    renderTodaySales();
+    return;
+  }
+
   if(products.length===0){
-    el.innerHTML = `<div class="empty" style="padding:20px 0;">Cadastre itens no cardápio antes de vender.</div>`;
+    el.innerHTML = modeToggle + `<div class="empty" style="padding:20px 0;">Cadastre itens no cardápio antes de vender por item.</div>`;
     document.getElementById('today-sales').innerHTML = '';
     return;
   }
@@ -216,7 +247,7 @@ function renderSellTab(){
   }
   const p = products.find(x=>x.id===sellSelection.productId);
   const total = p.preco * sellSelection.qty;
-  el.innerHTML = `
+  el.innerHTML = modeToggle + `
     <div class="field">
       <label>Item</label>
       <select id="sell-product-select" onchange="onSellProductChange(this.value)">
@@ -251,6 +282,17 @@ function registerSale(){
   const p = Deck53DB.getState().products.find(x=>x.id===sellSelection.productId);
   Deck53DB.registerSale(p, sellSelection.qty);
   sellSelection.qty = 1;
+  renderAll();
+  renderSellTab();
+  updateSyncStatus();
+  showToast('Venda registrada.');
+}
+function registerQuickSale(){
+  const valor = parseFloat(quickSale.valor) || 0;
+  if(valor<=0){ showToast('Informe um valor válido.'); return; }
+  const nome = quickSale.obs.trim() || 'Venda avulsa';
+  Deck53DB.registerRawSale(nome, valor);
+  quickSale = { valor: '', obs: '' };
   renderAll();
   renderSellTab();
   updateSyncStatus();
