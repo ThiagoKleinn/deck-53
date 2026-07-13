@@ -119,6 +119,22 @@ function registerSale(product, quantidade) {
   return sale;
 }
 
+function registerRawSale(nome, total, dataISO) {
+  const sale = {
+    id: uuid(),
+    produto_id: null,
+    nome: nome || "Venda do dia",
+    quantidade: 1,
+    preco_unit: total,
+    total,
+    data: dataISO || new Date().toISOString(),
+    user_id: window.SupabaseAuth.getSession()?.user_id
+  };
+  insertSaleLocal(sale);
+  trySync();
+  return sale;
+}
+
 function wipeAll() {
   state.products = [];
   state.sales = [];
@@ -134,7 +150,6 @@ async function wipeRemote() {
   }
 }
 
-// ---------- sincronização ----------
 async function flushQueue() {
   if (!isOnline()) return { ok: false, reason: "offline" };
   const session = window.SupabaseAuth.getSession();
@@ -197,6 +212,7 @@ window.Deck53DB = {
   updateProduct,
   removeProduct,
   registerSale,
+  registerRawSale,
   wipeAll,
   wipeRemote,
   trySync,
