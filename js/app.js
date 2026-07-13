@@ -113,6 +113,17 @@ function renderAll(){
   if(activeTab==='painel') renderDashboard();
 }
 
+function groupProductsByCategory(products){
+  const groups = {};
+  products.forEach(p=>{
+    const cat = (p.categoria || '').trim() || 'Sem categoria';
+    if(!groups[cat]) groups[cat] = [];
+    groups[cat].push(p);
+  });
+  const categorias = Object.keys(groups).sort((a,b)=> a.localeCompare(b, 'pt-BR'));
+  return categorias.map(cat=>({ cat, items: groups[cat] }));
+}
+
 function openProductModal(id){
   document.getElementById('product-id').value = id || '';
   if(id){
@@ -194,16 +205,7 @@ function renderProductList(){
     </div>`;
     return;
   }
-  const groups = {};
-  products.forEach(p=>{
-    const cat = (p.categoria || '').trim() || 'Sem categoria';
-    if(!groups[cat]) groups[cat] = [];
-    groups[cat].push(p);
-  });
-  const categorias = Object.keys(groups).sort((a,b)=> a.localeCompare(b, 'pt-BR'));
-
-  el.innerHTML = categorias.map(cat=>{
-    const items = groups[cat];
+  el.innerHTML = groupProductsByCategory(products).map(({cat, items})=>{
     return `
       <div class="category-group">
         <div class="category-heading">${escapeHtml(cat)}</div>
@@ -235,7 +237,6 @@ function renderProductList(){
   }).join('');
 }
 
-/* ================= VENDER ================= */
 function renderSellTab(){
   const el = document.getElementById('sell-card');
   const products = Deck53DB.getState().products;
@@ -255,7 +256,11 @@ function renderSellTab(){
     <div class="field">
       <label>Produto</label>
       <select id="sell-product-select" onchange="onSellProductChange(this.value)">
-        ${products.map(pr=>`<option value="${pr.id}" ${pr.id===p.id?'selected':''}>${escapeHtml(pr.nome)} (${pr.estoque} un.)</option>`).join('')}
+        ${groupProductsByCategory(products).map(({cat, items})=>`
+          <optgroup label="${escapeHtml(cat)}">
+            ${items.map(pr=>`<option value="${pr.id}" ${pr.id===p.id?'selected':''}>${escapeHtml(pr.nome)} (${pr.estoque} un.)</option>`).join('')}
+          </optgroup>
+        `).join('')}
       </select>
     </div>
     <div class="field">
