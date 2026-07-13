@@ -298,6 +298,15 @@ function registerQuickSale(){
   updateSyncStatus();
   showToast('Venda registrada.');
 }
+
+function deleteSale(id){
+  if(!confirm('Apagar esta venda? Isso não pode ser desfeito.')) return;
+  Deck53DB.removeSale(id);
+  renderAll();
+  updateSyncStatus();
+  showToast('Venda apagada.');
+}
+
 function renderTodaySales(){
   const el = document.getElementById('today-sales');
   const todayStr = new Date().toDateString();
@@ -318,6 +327,9 @@ function renderTodaySales(){
         <div style="text-align:right;">
           <div style="font-family:'IBM Plex Mono'; font-size:14px;">R$ ${fmt(s.total)}</div>
         </div>
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-danger btn-sm" onclick="deleteSale('${s.id}')">Apagar</button>
       </div>
     </div>
   `).join('');

@@ -75,6 +75,17 @@ function insertSaleLocal(sale, queueIt = true) {
   if (queueIt) enqueue({ id: uuid(), action: "upsert", table: "sales", payload: sale });
 }
 
+function deleteSaleLocal(id, queueIt = true) {
+  state.sales = state.sales.filter(s => s.id !== id);
+  persistCache();
+  if (queueIt) enqueue({ id: uuid(), action: "delete", table: "sales", targetId: id });
+}
+
+function removeSale(id) {
+  deleteSaleLocal(id);
+  trySync();
+}
+
 function newProduct(fields) {
   const product = {
     id: uuid(),
@@ -213,6 +224,7 @@ window.Deck53DB = {
   removeProduct,
   registerSale,
   registerRawSale,
+  removeSale,
   wipeAll,
   wipeRemote,
   trySync,
