@@ -389,14 +389,45 @@ function renderDashboard(){
     </div>
 
     <div style="text-align:center; margin-top:22px; display:flex; flex-direction:column; gap:10px; align-items:center;">
+      <button class="link-plain" onclick="exportSalesCSV()">Exportar vendas (CSV)</button>
       <button class="link-plain" onclick="logout()">Sair da conta</button>
       <button class="link-danger" onclick="resetAllData()">Apagar todos os dados</button>
     </div>
   `;
 }
 
+function exportSalesCSV(){
+  const sales = Deck53DB.getState().sales;
+  if(sales.length===0){ showToast('Não há vendas para exportar.'); return; }
+  const header = 'data,nome,quantidade,preco_unit,total\n';
+  const rows = sales.map(s=>{
+    const dataFmt = new Date(s.data).toLocaleString('pt-BR');
+    const nomeEscapado = (s.nome || '').replace(/"/g, '""');
+    return `"${dataFmt}","${nomeEscapado}",${s.quantidade},${s.preco_unit},${s.total}`;
+  }).join('\n');
+  const csv = header + rows;
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `deck53-vendas-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV exportado.');
+}
+
 async function resetAllData(){
-  if(!confirm('Isso vai apagar todos os itens do cardápio e vendas, neste aparelho e na nuvem. Tem certeza?')) return;
+  const sales = Deck53DB.getState().sales;
+  if(sales.length>0) exportSalesCSV();
+
+  const digitado = prompt('Isso vai apagar TODOS os itens do cardápio e vendas, neste aparelho e na nuvem — sem volta.' + (sales.length>0 ? ' Um CSV das vendas foi baixado como backup.' : '') + '\n\nPara confirmar, digite APAGAR:');
+  if(digitado !== 'APAGAR'){
+    showToast('Operação cancelada.');
+    return;
+  }
+
   await Deck53DB.wipeRemote();
   Deck53DB.wipeAll();
   renderAll();
