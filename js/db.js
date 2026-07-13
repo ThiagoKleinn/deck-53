@@ -44,7 +44,6 @@ function isOnline() {
   return navigator.onLine;
 }
 
-// ---------- carregar estado inicial (cache local) ----------
 function init() {
   state.products = readLocal(CACHE_PRODUCTS);
   state.sales = readLocal(CACHE_SALES);
@@ -81,10 +80,7 @@ function newProduct(fields) {
     id: uuid(),
     nome: fields.nome,
     categoria: fields.categoria || "",
-    custo: fields.custo || 0,
-    venda: fields.venda || 0,
-    estoque: fields.estoque || 0,
-    minimo: fields.minimo ?? 5,
+    preco: fields.preco || 0,
     user_id: window.SupabaseAuth.getSession()?.user_id
   };
   upsertProductLocal(product);
@@ -101,33 +97,23 @@ function updateProduct(id, fields) {
   return updated;
 }
 
-function restockProduct(id, qty) {
-  const p = state.products.find(x => x.id === id);
-  if (!p) return null;
-  return updateProduct(id, { estoque: p.estoque + qty });
-}
-
 function removeProduct(id) {
   deleteProductLocal(id);
   trySync();
 }
 
 function registerSale(product, quantidade) {
-  const total = product.venda * quantidade;
-  const lucro = (product.venda - product.custo) * quantidade;
+  const total = product.preco * quantidade;
   const sale = {
     id: uuid(),
     produto_id: product.id,
     nome: product.nome,
     quantidade,
-    preco_unit: product.venda,
-    custo_unit: product.custo,
+    preco_unit: product.preco,
     total,
-    lucro,
     data: new Date().toISOString(),
     user_id: window.SupabaseAuth.getSession()?.user_id
   };
-  updateProduct(product.id, { estoque: product.estoque - quantidade });
   insertSaleLocal(sale);
   trySync();
   return sale;
@@ -148,6 +134,7 @@ async function wipeRemote() {
   }
 }
 
+// ---------- sincronização ----------
 async function flushQueue() {
   if (!isOnline()) return { ok: false, reason: "offline" };
   const session = window.SupabaseAuth.getSession();
@@ -208,7 +195,6 @@ window.Deck53DB = {
   getState: () => state,
   newProduct,
   updateProduct,
-  restockProduct,
   removeProduct,
   registerSale,
   wipeAll,

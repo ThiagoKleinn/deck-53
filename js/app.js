@@ -128,17 +128,13 @@ function openProductModal(id){
   document.getElementById('product-id').value = id || '';
   if(id){
     const p = Deck53DB.getState().products.find(x=>x.id===id);
-    document.getElementById('product-modal-title').textContent = 'Editar produto';
+    document.getElementById('product-modal-title').textContent = 'Editar item';
     document.getElementById('p-nome').value = p.nome;
     document.getElementById('p-categoria').value = p.categoria || '';
-    document.getElementById('p-custo').value = p.custo;
-    document.getElementById('p-venda').value = p.venda;
-    document.getElementById('p-estoque').value = p.estoque;
-    document.getElementById('p-minimo').value = p.minimo;
+    document.getElementById('p-venda').value = p.preco;
   } else {
-    document.getElementById('product-modal-title').textContent = 'Novo produto';
-    ['p-nome','p-categoria','p-custo','p-venda','p-estoque'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('p-minimo').value = 5;
+    document.getElementById('product-modal-title').textContent = 'Novo item';
+    ['p-nome','p-categoria','p-venda'].forEach(id=>document.getElementById(id).value='');
   }
   document.getElementById('product-overlay').classList.add('active');
 }
@@ -151,48 +147,24 @@ function saveProduct(){
   const id = document.getElementById('product-id').value;
   const nome = document.getElementById('p-nome').value.trim();
   const categoria = document.getElementById('p-categoria').value.trim();
-  const custo = parseFloat(document.getElementById('p-custo').value) || 0;
-  const venda = parseFloat(document.getElementById('p-venda').value) || 0;
-  const estoque = parseInt(document.getElementById('p-estoque').value) || 0;
-  const minimo = parseInt(document.getElementById('p-minimo').value) || 5;
+  const preco = parseFloat(document.getElementById('p-venda').value) || 0;
 
-  if(!nome){ showToast('Dá um nome pro produto antes de salvar.'); return; }
+  if(!nome){ showToast('Dá um nome pro item antes de salvar.'); return; }
 
-  if(id) Deck53DB.updateProduct(id, {nome, categoria, custo, venda, estoque, minimo});
-  else Deck53DB.newProduct({nome, categoria, custo, venda, estoque, minimo});
+  if(id) Deck53DB.updateProduct(id, {nome, categoria, preco});
+  else Deck53DB.newProduct({nome, categoria, preco});
 
   closeProductModal();
   renderAll();
   updateSyncStatus();
-  showToast('Produto salvo.');
+  showToast('Item salvo.');
 }
 
 function deleteProduct(id){
-  if(!confirm('Remover este produto do estoque?')) return;
+  if(!confirm('Remover este item do cardápio?')) return;
   Deck53DB.removeProduct(id);
   renderAll();
   updateSyncStatus();
-}
-
-function openRestock(id){
-  const p = Deck53DB.getState().products.find(x=>x.id===id);
-  document.getElementById('restock-id').value = id;
-  document.getElementById('restock-product-name').textContent = p.nome;
-  document.getElementById('restock-qty').value = '';
-  document.getElementById('restock-overlay').classList.add('active');
-}
-document.getElementById('restock-overlay').addEventListener('click', e=>{
-  if(e.target.id==='restock-overlay') document.getElementById('restock-overlay').classList.remove('active');
-});
-function confirmRestock(){
-  const id = document.getElementById('restock-id').value;
-  const qty = parseInt(document.getElementById('restock-qty').value) || 0;
-  if(qty<=0){ showToast('Informe uma quantidade válida.'); return; }
-  Deck53DB.restockProduct(id, qty);
-  document.getElementById('restock-overlay').classList.remove('active');
-  renderAll();
-  updateSyncStatus();
-  showToast('Estoque atualizado.');
 }
 
 function renderProductList(){
@@ -200,33 +172,26 @@ function renderProductList(){
   const products = Deck53DB.getState().products;
   if(products.length===0){
     el.innerHTML = `<div class="empty">
-      <div class="empty-title">Nenhum produto ainda</div>
-      Adicione o primeiro produto do Deck 53 para começar a controlar o estoque.
+      <div class="empty-title">Nenhum item ainda</div>
+      Adicione o primeiro item do cardápio do Deck 53.
     </div>`;
     return;
   }
+
   el.innerHTML = groupProductsByCategory(products).map(({cat, items})=>{
     return `
       <div class="category-group">
         <div class="category-heading">${escapeHtml(cat)}</div>
         ${items.map(p=>{
-      const margem = p.venda>0 ? (((p.venda-p.custo)/p.venda)*100).toFixed(0) : '0';
-      const low = p.estoque <= p.minimo;
       return `
           <div class="card">
             <div class="product-row">
               <div>
                 <div class="product-name">${escapeHtml(p.nome)}</div>
               </div>
-              <div class="stock-pill ${low?'low':''}">${p.estoque} un.</div>
-            </div>
-            <div class="product-meta">
-              <span>Custo: R$ ${fmt(p.custo)}</span>
-              <span>Venda: R$ ${fmt(p.venda)}</span>
-              <span>Margem: ${margem}%</span>
+              <div class="price-pill">R$ ${fmt(p.preco)}</div>
             </div>
             <div class="row-actions">
-              <button class="btn btn-ghost btn-sm" onclick="openRestock('${p.id}')">+ Repor</button>
               <button class="btn btn-ghost btn-sm" onclick="openProductModal('${p.id}')">Editar</button>
               <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">Remover</button>
             </div>
@@ -241,7 +206,7 @@ function renderSellTab(){
   const el = document.getElementById('sell-card');
   const products = Deck53DB.getState().products;
   if(products.length===0){
-    el.innerHTML = `<div class="empty" style="padding:20px 0;">Cadastre produtos no estoque antes de vender.</div>`;
+    el.innerHTML = `<div class="empty" style="padding:20px 0;">Cadastre itens no cardápio antes de vender.</div>`;
     document.getElementById('today-sales').innerHTML = '';
     return;
   }
@@ -250,15 +215,14 @@ function renderSellTab(){
     sellSelection.qty = 1;
   }
   const p = products.find(x=>x.id===sellSelection.productId);
-  const total = p.venda * sellSelection.qty;
-  const lucro = (p.venda - p.custo) * sellSelection.qty;
+  const total = p.preco * sellSelection.qty;
   el.innerHTML = `
     <div class="field">
-      <label>Produto</label>
+      <label>Item</label>
       <select id="sell-product-select" onchange="onSellProductChange(this.value)">
         ${groupProductsByCategory(products).map(({cat, items})=>`
           <optgroup label="${escapeHtml(cat)}">
-            ${items.map(pr=>`<option value="${pr.id}" ${pr.id===p.id?'selected':''}>${escapeHtml(pr.nome)} (${pr.estoque} un.)</option>`).join('')}
+            ${items.map(pr=>`<option value="${pr.id}" ${pr.id===p.id?'selected':''}>${escapeHtml(pr.nome)}</option>`).join('')}
           </optgroup>
         `).join('')}
       </select>
@@ -272,23 +236,19 @@ function renderSellTab(){
       </div>
     </div>
     <div class="sell-preview"><span>Total da venda</span><b>R$ ${fmt(total)}</b></div>
-    <div class="sell-preview"><span>Lucro estimado</span><b style="color:var(--lime)">R$ ${fmt(lucro)}</b></div>
     <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="registerSale()">Registrar venda</button>
   `;
   renderTodaySales();
 }
 function onSellProductChange(id){ sellSelection.productId = id; sellSelection.qty = 1; renderSellTab(); }
 function changeQty(delta){
-  const p = Deck53DB.getState().products.find(x=>x.id===sellSelection.productId);
   const next = sellSelection.qty + delta;
   if(next < 1) return;
-  if(next > p.estoque){ showToast('Estoque insuficiente.'); return; }
   sellSelection.qty = next;
   renderSellTab();
 }
 function registerSale(){
   const p = Deck53DB.getState().products.find(x=>x.id===sellSelection.productId);
-  if(sellSelection.qty > p.estoque){ showToast('Estoque insuficiente para essa venda.'); return; }
   Deck53DB.registerSale(p, sellSelection.qty);
   sellSelection.qty = 1;
   renderAll();
@@ -315,7 +275,6 @@ function renderTodaySales(){
         </div>
         <div style="text-align:right;">
           <div style="font-family:'IBM Plex Mono'; font-size:14px;">R$ ${fmt(s.total)}</div>
-          <div style="font-family:'IBM Plex Mono'; font-size:11.5px; color:var(--lime);">+R$ ${fmt(s.lucro)}</div>
         </div>
       </div>
     </div>
@@ -345,47 +304,34 @@ function renderDashboard(){
   const el = document.getElementById('dashboard-content');
   const list = salesForPeriod(currentPeriod);
   const receita = list.reduce((a,s)=>a+s.total,0);
-  const custoTotal = list.reduce((a,s)=>a+s.custo_unit*s.quantidade,0);
-  const lucro = list.reduce((a,s)=>a+s.lucro,0);
-  const margem = receita>0 ? ((lucro/receita)*100).toFixed(0) : '0';
+  const totalItens = list.reduce((a,s)=>a+s.quantidade,0);
 
   const ranking = {};
   list.forEach(s=>{
-    if(!ranking[s.nome]) ranking[s.nome] = {qtd:0, lucro:0};
+    if(!ranking[s.nome]) ranking[s.nome] = {qtd:0, total:0};
     ranking[s.nome].qtd += s.quantidade;
-    ranking[s.nome].lucro += s.lucro;
+    ranking[s.nome].total += s.total;
   });
-  const top = Object.entries(ranking).sort((a,b)=>b[1].lucro-a[1].lucro).slice(0,5);
-  const lowStock = Deck53DB.getState().products.filter(p=>p.estoque <= p.minimo);
+  const top = Object.entries(ranking).sort((a,b)=>b[1].total-a[1].total).slice(0,5);
 
   el.innerHTML = `
     <div class="stat-grid">
-      <div class="stat-card"><div class="stat-label">RECEITA</div><div class="stat-value">R$ ${fmt(receita)}</div></div>
-      <div class="stat-card"><div class="stat-label">CUSTO</div><div class="stat-value">R$ ${fmt(custoTotal)}</div></div>
       <div class="stat-card full">
-        <div class="stat-label">LUCRO ${list.length? '· margem '+margem+'%' : ''}</div>
-        <div class="stat-value lime">R$ ${fmt(lucro)}</div>
-        <div class="stat-sub">${list.length} venda${list.length===1?'':'s'} no período</div>
+        <div class="stat-label">FATURAMENTO</div>
+        <div class="stat-value lime">R$ ${fmt(receita)}</div>
+        <div class="stat-sub">${list.length} venda${list.length===1?'':'s'} · ${totalItens} item${totalItens===1?'':'s'} no período</div>
       </div>
     </div>
 
     <div class="plank-divider"></div>
     <div class="card">
-      <div class="section-title" style="font-size:16px; margin-bottom:8px;">Top produtos (por lucro)</div>
+      <div class="section-title" style="font-size:16px; margin-bottom:8px;">Top itens (por faturamento)</div>
       ${top.length===0 ? '<div class="empty" style="padding:10px 0;">Sem vendas neste período.</div>' :
       top.map(([nome,v])=>`
           <div class="rank-row">
             <div class="rank-name">${escapeHtml(nome)} <span style="color:var(--text-faint); font-weight:400;">× ${v.qtd}</span></div>
-            <div class="rank-value">+R$ ${fmt(v.lucro)}</div>
+            <div class="rank-value">R$ ${fmt(v.total)}</div>
           </div>`).join('')}
-    </div>
-
-    <div class="card">
-      <div class="section-title" style="font-size:16px; margin-bottom:8px;">Estoque baixo</div>
-      ${lowStock.length===0 ? '<div class="empty" style="padding:10px 0;">Tudo certo por aqui.</div>' :
-      lowStock.map(p=>`
-          <div class="alert-row"><span>${escapeHtml(p.nome)}</span><span>${p.estoque} un. (mín. ${p.minimo})</span></div>
-        `).join('')}
     </div>
 
     <div style="text-align:center; margin-top:22px; display:flex; flex-direction:column; gap:10px; align-items:center;">
@@ -396,7 +342,7 @@ function renderDashboard(){
 }
 
 async function resetAllData(){
-  if(!confirm('Isso vai apagar todos os produtos e vendas, neste aparelho e na nuvem. Tem certeza?')) return;
+  if(!confirm('Isso vai apagar todos os itens do cardápio e vendas, neste aparelho e na nuvem. Tem certeza?')) return;
   await Deck53DB.wipeRemote();
   Deck53DB.wipeAll();
   renderAll();

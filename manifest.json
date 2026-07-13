@@ -1,7 +1,7 @@
 {
   "name": "Deck 53 - Painel do Dono",
   "short_name": "Deck 53",
-  "description": "Controle de estoque, vendas e lucro do Deck 53",
+  "description": "Controle de vendas e faturamento do Deck 53",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

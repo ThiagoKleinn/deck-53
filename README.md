@@ -1,6 +1,6 @@
 # Deck 53 — Painel do Dono
 
-App de controle de estoque, vendas e lucro. Funciona offline, tem ícone
+App de controle de vendas e faturamento. Funciona offline, tem ícone
 próprio (pode ser instalado na tela inicial do celular) e sincroniza os
 dados na nuvem via Supabase, acessível de qualquer aparelho com login.
 
