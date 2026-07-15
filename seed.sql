@@ -120,3 +120,12 @@ from owner, (values
 ) as v(nome, categoria, preco)
     on conflict (user_id, nome, categoria)
 do update set preco = excluded.preco;
+
+
+-- DEPOIS
+-- atualiza o estoque para aparecer de fato no cardapio
+
+update products
+set estoque = 100
+where user_id = '3caf83a8-a156-42d4-b1d1-d90bb8cdae45'
+  and estoque = 0;
