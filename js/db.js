@@ -3,8 +3,9 @@ const CACHE_SALES    = "deck53_cache_sales";
 const CACHE_TABLES   = "deck53_cache_tables";
 const CACHE_TITEMS   = "deck53_cache_table_items";
 const QUEUE_KEY      = "deck53_pending_queue";
+const CACHE_DEBTORS = "deck53_cache_debtors";
 
-let state = { products: [], sales: [], tables: [], tableItems: [] };
+let state = { products: [], sales: [], tables: [], tableItems: [], debtors: [] };
 let syncing = false;
 
 function uuid() {
@@ -31,6 +32,7 @@ function init() {
   state.sales      = readLocal(CACHE_SALES);
   state.tables     = readLocal(CACHE_TABLES);
   state.tableItems = readLocal(CACHE_TITEMS);
+  state.debtors = readLocal(CACHE_DEBTORS);
 
   // Cria 10 mesas padrão se não existir nenhuma
   if (state.tables.length === 0) {
@@ -50,6 +52,7 @@ function persistCache() {
   writeLocal(CACHE_SALES,    state.sales);
   writeLocal(CACHE_TABLES,   state.tables);
   writeLocal(CACHE_TITEMS,   state.tableItems);
+  writeLocal(CACHE_DEBTORS, state.debtors);
 }
 
 /* ── products ── */
@@ -207,9 +210,38 @@ function closeTable(tableId, paymentMethod) {
   return total;
 }
 
+/* ── death note (fiado) ── */
+function upsertDebtorLocal(debtor, q=true) {
+  const idx = state.debtors.findIndex(d => d.id === debtor.id);
+  if (idx >= 0) state.debtors[idx] = debtor; else state.debtors.push(debtor);
+  persistCache();
+  if (q) enqueue({ id: uuid(), action: "upsert", table: "debtors", payload: debtor });
+}
+function deleteDebtorLocal(id, q=true) {
+  state.debtors = state.debtors.filter(d => d.id !== id);
+  persistCache();
+  if (q) enqueue({ id: uuid(), action: "delete", table: "debtors", targetId: id });
+}
+function newDebtor(nome, valor) {
+  const d = { id: uuid(), user_id: window.SupabaseAuth.getSession()?.user_id,
+    nome, valor: valor||0, created_at: new Date().toISOString() };
+  upsertDebtorLocal(d); trySync(); return d;
+}
+function adjustDebtorValue(id, delta) {
+  const d = state.debtors.find(x => x.id === id); if (!d) return;
+  const novoValor = Math.max(0, (d.valor||0) + delta);
+  const u = { ...d, valor: novoValor };
+  upsertDebtorLocal(u); trySync(); return u;
+}
+function renameDebtor(id, nome) {
+  const d = state.debtors.find(x => x.id === id); if (!d) return;
+  const u = { ...d, nome }; upsertDebtorLocal(u); trySync();
+}
+function removeDebtor(id) { deleteDebtorLocal(id); trySync(); }
+
 /* ── wipe ── */
 function wipeAll() {
-  state = { products: [], sales: [], tables: [], tableItems: [] };
+  state = { products: [], sales: [], tables: [], tableItems: [], debtors: [] };
   persistCache(); setQueue([]);
 }
 async function wipeRemote() {
@@ -219,6 +251,7 @@ async function wipeRemote() {
     await window.sbRequest(`tables?user_id=eq.${uid}`, "DELETE");
     await window.sbRequest(`products?user_id=eq.${uid}`, "DELETE");
     await window.sbRequest(`sales?user_id=eq.${uid}`, "DELETE");
+    await window.sbRequest(`debtors?user_id=eq.${uid}`, "DELETE");
   } catch(e) {}
 }
 
@@ -252,11 +285,13 @@ async function fetchRemoteAndMerge() {
       window.sbRequest(`sales?select=*&order=data.asc`, "GET"),
       window.sbRequest(`tables?select=*&order=ordem.asc`, "GET"),
       window.sbRequest(`table_items?select=*&order=created_at.asc`, "GET"),
+      window.sbRequest(`debtors?select=*&order=created_at.asc`, "GET"),
     ]);
     state.products   = products   || [];
     state.sales      = sales      || [];
     state.tables     = tables     || [];
     state.tableItems = tableItems || [];
+    state.debtors = debtors || [];
     persistCache();
     return { ok: true };
   } catch(e) { return { ok: false, error: e }; }
@@ -282,5 +317,6 @@ window.Deck53DB = {
   getTableItems, getTableTotal, closeTable,
   wipeAll, wipeRemote,
   trySync, fetchRemoteAndMerge,
-  pendingCount, isOnline
+  pendingCount, isOnline,
+  newDebtor, adjustDebtorValue, renameDebtor, removeDebtor
 };

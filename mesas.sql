@@ -43,3 +43,20 @@ create policy "delete own table_items" on table_items for delete using (auth.uid
 
 -- índice útil para buscar itens de uma mesa rapidamente
 create index if not exists table_items_table_id_idx on table_items(table_id);
+
+-- death note - fiado
+
+create table if not exists debtors (
+                                       id uuid primary key,
+                                       user_id uuid references auth.users not null,
+                                       nome text not null,
+                                       valor numeric not null default 0,
+                                       created_at timestamptz not null default now()
+    );
+
+alter table debtors enable row level security;
+
+create policy "select own debtors" on debtors for select using (auth.uid() = user_id);
+create policy "insert own debtors" on debtors for insert with check (auth.uid() = user_id);
+create policy "update own debtors" on debtors for update using (auth.uid() = user_id);
+create policy "delete own debtors" on debtors for delete using (auth.uid() = user_id);

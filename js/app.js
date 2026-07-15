@@ -96,6 +96,7 @@ function switchTab(tab){
   document.querySelectorAll('.nav-btn').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
   if(tab==='mesas')   renderMesasTab();
   if(tab==='painel')  renderDashboard();
+  if(tab==='deathnote') renderDeathNoteTab();
 }
 
 function renderAll(){
@@ -103,6 +104,79 @@ function renderAll(){
   const activeTab=document.querySelector('.nav-btn.active')?.dataset.tab||'cardapio';
   if(activeTab==='mesas')  renderMesasTab();
   if(activeTab==='painel') renderDashboard();
+  if(activeTab==='deathnote') renderDeathNoteTab();
+}
+
+/* ═══════════════════════════════════════════════
+   DEATH NOTE (fiado)
+════════════════════════════════════════════════ */
+function renderDeathNoteTab(){
+  const el=document.getElementById('deathnote-list');
+  const debtors=Deck53DB.getState().debtors.slice().sort((a,b)=>b.valor-a.valor);
+  const totalDevido=debtors.reduce((s,d)=>s+d.valor,0);
+  document.getElementById('deathnote-total').textContent=`R$ ${fmt(totalDevido)}`;
+
+  if(debtors.length===0){
+    el.innerHTML=`<div class="empty"><div class="empty-title">Ninguém devendo</div>Adicione um nome para começar a controlar o fiado.</div>`;
+    return;
+  }
+
+  el.innerHTML=debtors.map(d=>`
+    <div class="card debtor-card">
+      <div class="debtor-row">
+        <div class="debtor-nome" onclick="renameDebtorPrompt('${d.id}')">${escapeHtml(d.nome)}</div>
+        <div class="debtor-valor ${d.valor===0?'quitado':''}">R$ ${fmt(d.valor)}</div>
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="addDebtToDebtor('${d.id}')">+ Fiado</button>
+        <button class="btn btn-ghost btn-sm" onclick="registerPayment('${d.id}')">Pagou</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteDebtorConfirm('${d.id}')">Remover</button>
+      </div>
+    </div>`).join('');
+}
+
+function openNewDebtorModal(){
+  document.getElementById('debtor-nome').value='';
+  document.getElementById('debtor-valor').value='';
+  document.getElementById('debtor-overlay').classList.add('active');
+}
+function closeDebtorModal(){ document.getElementById('debtor-overlay').classList.remove('active'); }
+document.getElementById('debtor-overlay').addEventListener('click',e=>{
+  if(e.target.id==='debtor-overlay') closeDebtorModal();
+});
+function saveNewDebtor(){
+  const nome=document.getElementById('debtor-nome').value.trim();
+  const valor=parseFloat(document.getElementById('debtor-valor').value)||0;
+  if(!nome){ showToast('Coloque o nome da pessoa.'); return; }
+  Deck53DB.newDebtor(nome, valor);
+  closeDebtorModal(); renderDeathNoteTab(); updateSyncStatus(); showToast('Adicionado à lista.');
+}
+
+function addDebtToDebtor(id){
+  const raw=prompt('Valor do fiado (R$):');
+  const valor=parseFloat((raw||'').replace(',','.'));
+  if(!valor || valor<=0) return;
+  Deck53DB.adjustDebtorValue(id, valor);
+  renderDeathNoteTab(); updateSyncStatus(); showToast('Fiado adicionado.');
+}
+function registerPayment(id){
+  const raw=prompt('Valor pago agora (R$):');
+  const valor=parseFloat((raw||'').replace(',','.'));
+  if(!valor || valor<=0) return;
+  Deck53DB.adjustDebtorValue(id, -valor);
+  renderDeathNoteTab(); updateSyncStatus(); showToast('Pagamento registrado.');
+}
+function renameDebtorPrompt(id){
+  const d=Deck53DB.getState().debtors.find(x=>x.id===id); if(!d) return;
+  const novoNome=prompt('Nome:', d.nome);
+  if(!novoNome||!novoNome.trim()) return;
+  Deck53DB.renameDebtor(id, novoNome.trim());
+  renderDeathNoteTab(); updateSyncStatus();
+}
+function deleteDebtorConfirm(id){
+  if(!confirm('Remover esta pessoa da lista?')) return;
+  Deck53DB.removeDebtor(id);
+  renderDeathNoteTab(); updateSyncStatus(); showToast('Removido.');
 }
 
 /* ─── Cardápio ──────────────────────────────── */

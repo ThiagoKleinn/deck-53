@@ -76,6 +76,18 @@
       <div class="mesas-grid" id="mesas-grid"></div>
     </section>
 
+    <section class="tab-panel" id="tab-deathnote">
+      <div class="section-row">
+        <div class="section-title">Death Note</div>
+        <button class="btn btn-primary btn-sm" onclick="openNewDebtorModal()">+ Pessoa</button>
+      </div>
+      <div class="card" style="margin-bottom:14px;">
+        <div class="stat-label">TOTAL A RECEBER</div>
+        <div class="stat-value lime" id="deathnote-total">R$ 0,00</div>
+      </div>
+      <div id="deathnote-list"></div>
+    </section>
+
     <section class="tab-panel" id="tab-painel">
       <div class="section-row"><div class="section-title">Faturamento</div></div>
       <div class="period-tabs" id="period-tabs">
@@ -96,6 +108,10 @@
     <button class="nav-btn" data-tab="mesas" onclick="switchTab('mesas')">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M9 4v16"/></svg>
       Mesas
+      <button class="nav-btn" data-tab="deathnote" onclick="switchTab('deathnote')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5"/></svg>
+        Death Note
+      </button>
     </button>
     <button class="nav-btn" data-tab="painel" onclick="switchTab('painel')">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
@@ -113,6 +129,17 @@
     <div class="field"><label>Categoria</label><input type="text" id="p-categoria" placeholder="Ex: Bebidas, Petiscos, Drinks"></div>
     <div class="field"><label>Preço de venda (R$)</label><input type="number" step="0.01" id="p-venda" placeholder="0,00"></div>
     <button class="btn btn-primary btn-block" onclick="saveProduct()">Salvar item</button>
+  </div>
+</div>
+
+<!--death note-->
+
+<div class="overlay" id="debtor-overlay">
+  <div class="modal">
+    <div class="modal-title">Adicionar à Death Note</div>
+    <div class="field"><label>Nome</label><input type="text" id="debtor-nome" placeholder="Nome da pessoa"></div>
+    <div class="field"><label>Valor devido inicial (R$)</label><input type="number" step="0.01" id="debtor-valor" placeholder="0,00"></div>
+    <button class="btn btn-primary btn-block" onclick="saveNewDebtor()">Salvar</button>
   </div>
 </div>
 

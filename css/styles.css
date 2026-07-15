@@ -314,3 +314,9 @@ nav{
   padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);
 }
 .manage-table-nome{ font-weight:600; font-size:14.5px; }
+
+.debtor-card{ }
+.debtor-row{ display:flex; justify-content:space-between; align-items:center; }
+.debtor-nome{ font-weight:600; font-size:15.5px; cursor:pointer; }
+.debtor-valor{ font-family:'IBM Plex Mono', monospace; font-size:15px; font-weight:600; color: var(--red); }
+.debtor-valor.quitado{ color: var(--text-faint); }
